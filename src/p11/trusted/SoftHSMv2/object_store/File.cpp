@@ -55,6 +55,8 @@
 #endif
 #include <errno.h>
 
+#define MAX_FOPEN_RETRIES 200
+
 enum AttributeKind {
 	akUnknown,
 	akBoolean,
@@ -146,9 +148,21 @@ File::File(std::string inPath, bool forRead /* = true */, bool forWrite /* = fal
 	valid = false;
 
 	stream = sgx_fopen_auto_key(path.c_str(), "rb");
-	std::string fileMode = "";
+    if (!stream && (ENOENT == errno))
+    {
+        for (auto i = 0; i < MAX_FOPEN_RETRIES; ++i)
+        {
+            sgx_fclose(stream);
+            stream = sgx_fopen_auto_key(path.c_str(), "rb");
+            if (stream)
+            {
+                break;
+            }
+        }
+    }
 
-	if ((stream != nullptr) || (EWOULDBLOCK == errno))
+    std::string fileMode = "";
+    if (stream || (EWOULDBLOCK == errno))
 	{
 		sgx_fclose(stream);
 		fileMode = "rb+";
@@ -764,7 +778,7 @@ bool File::truncate()
 	sgx_fclose(stream);
 	valid = ((stream = sgx_fopen_auto_key(path.c_str(), "wb+")) != nullptr);
 
-    while (!valid && (EWOULDBLOCK == errno))
+    while (!valid && ((EWOULDBLOCK == errno) || (EACCES == errno)))
     {
         sgx_fclose(stream);
         valid = ((stream = sgx_fopen_auto_key(path.c_str(), "wb+")) != nullptr);
