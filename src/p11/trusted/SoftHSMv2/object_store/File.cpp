@@ -56,6 +56,7 @@
 #include <errno.h>
 
 #define MAX_FOPEN_RETRIES 200
+#define MAX_ISEMPTY_RETRIES 50
 
 enum AttributeKind {
 	akUnknown,
@@ -174,10 +175,32 @@ File::File(std::string inPath, bool forRead /* = true */, bool forWrite /* = fal
 
     valid = ((stream = sgx_fopen_auto_key(path.c_str(), reinterpret_cast<const char*>(fileMode.c_str()))) != nullptr);
 
-    while (!valid && (EWOULDBLOCK == errno))
+    while (!valid && ((EWOULDBLOCK == errno) || (ENOENT == errno)))
     {
         sgx_fclose(stream);
         valid = ((stream = sgx_fopen_auto_key(path.c_str(), reinterpret_cast<const char*>(fileMode.c_str()))) != nullptr);
+    }
+
+    // If file is empty try to read it again
+    if (isEmpty() && path.substr(path.size()-5).compare(".lock")) // Ignore lock file
+    {
+        if (0 == fileMode.compare("rb+")) // File opened in write mode is empty, so ignore it
+        {
+            for (auto i = 0 ; i < MAX_ISEMPTY_RETRIES ; i++)
+            {
+                sgx_fclose(stream);
+                valid = ((stream = sgx_fopen_auto_key(path.c_str(), reinterpret_cast<const char*>(fileMode.c_str()))) != nullptr);
+                while (!valid && ((EWOULDBLOCK == errno) || (ENOENT == errno)))
+                {
+                    sgx_fclose(stream);
+                    valid = ((stream = sgx_fopen_auto_key(path.c_str(), reinterpret_cast<const char*>(fileMode.c_str()))) != nullptr);
+                }
+                if (!isEmpty()) // Exit loop when file is no loger empty
+                {
+                    break;
+                }
+            }
+        }
     }
 
 }

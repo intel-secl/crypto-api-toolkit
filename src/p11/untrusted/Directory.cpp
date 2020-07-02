@@ -164,11 +164,13 @@ namespace Directory
 
 		// Close the directory
 		closedir(dir);
+        std::string tokenObjectFile = "token.object*";
+        uint32_t tokenObjectFileLen = tokenObjectFile.size();
 
 		if ((!subDirsBuffer && subDirsString.length()) 	||
 			(!filesBuffer && filesString.length())		||
 			(subDirsBuffer && (subDirsSize < subDirsString.length())) ||
-			(filesBuffer && (filesSize < filesString.length())))
+			(filesBuffer && (filesSize < filesString.length()) && ((filesString.length() - filesSize) != tokenObjectFileLen)))
 		{
             // Flow to retrieve size required for subDirs and files buffers.
 			if (((!subDirsBuffer && subDirsString.length()) ||
@@ -214,10 +216,21 @@ namespace Directory
 
 			if (filesBuffer)
 			{
-				if ((filesString.length()) && (filesSize >= filesString.length()))
+				if (filesString.length())
 				{
-					*filesBufferSize = filesString.length();
-					memcpy(filesBuffer, filesString.c_str(), filesString.length());
+                    if (filesSize >= filesString.length())
+                    {
+                        *filesBufferSize = filesString.length();
+                        memcpy(filesBuffer, filesString.c_str(), filesString.length());
+                    }
+                    else
+                    {
+                        // sgx_fopen_auto_key removes a file even it exists, enumerating directory at the same time omits listing "token.object"
+                        // To handle absence of token.object when enumerating token directory
+                        // If difference of length of fileString and fileSize is same as length of "token.object*" don't throw error
+                        *filesBufferSize = filesSize;
+                        memcpy(filesBuffer, filesString.c_str(), filesSize);
+                    }
 				}
 			}
 		}
