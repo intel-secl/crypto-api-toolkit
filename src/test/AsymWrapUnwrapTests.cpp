@@ -288,6 +288,43 @@ void AsymWrapUnwrapTests::testRsaWrapUnwrap()
 }
 
 #ifdef DCAP_SUPPORT
+void print_quote_details(sgx_quote_t *sgxQuote)
+{
+	int k = 0;
+	printf("\nSGX_ISSUER[size:%lu]:", sizeof(sgxQuote->report_body.mr_signer.m));
+	for(; k < sizeof(sgxQuote->report_body.mr_signer.m); k++)
+	{
+		printf("%02x", sgxQuote->report_body.mr_signer.m[k]);
+	}
+
+	printf("\nSGX_MEASUREMENT[size:%lu]:", sizeof(sgxQuote->report_body.mr_enclave.m));
+	for(k = 0; k < sizeof(sgxQuote->report_body.mr_enclave.m); k++)
+	{
+		printf("%02x", sgxQuote->report_body.mr_enclave.m[k]);
+	}
+
+	printf("\nSGX_CONFIG_ID[size:%lu]:", sizeof(sgxQuote->report_body.config_id));
+	for(k = 0; k < sizeof(sgxQuote->report_body.config_id); k++)
+	{
+		printf("%02x", sgxQuote->report_body.config_id[k]);
+	}
+
+	printf("\nSGX_PRODUCT_ID[size:%lu]:",sizeof(sgxQuote->report_body.isv_prod_id));
+	printf("\n%02x", sgxQuote->report_body.isv_prod_id);
+
+	printf("SGX_EXT_PRODUCT_ID[size:%lu]:",sizeof(sgxQuote->report_body.isv_ext_prod_id));
+	for(k = 0; k < sizeof(sgxQuote->report_body.isv_ext_prod_id); k++)
+	{
+		printf("%02x", sgxQuote->report_body.isv_ext_prod_id[k]);
+	}
+
+	printf("\nSGX_CONFIG_ID_SVN[size:%lu]:",sizeof(sgxQuote->report_body.config_svn));
+	printf("%02x\n", sgxQuote->report_body.config_svn);
+
+	printf("SGX_ENCLAVE_SVN[size:%lu]:",sizeof(sgxQuote->report_body.isv_svn));
+	printf("%01x\n", sgxQuote->report_body.isv_svn);
+}
+
 bool AsymWrapUnwrapTests::customQuoteEcdsa(const CK_MECHANISM_TYPE& mechanismType,
                                            const CK_SESSION_HANDLE& hSession,
                                            const CK_OBJECT_HANDLE&  hKey)
@@ -333,6 +370,8 @@ bool AsymWrapUnwrapTests::customQuoteEcdsa(const CK_MECHANISM_TYPE& mechanismTyp
 
         sgx_quote_t* sgxQuote  = reinterpret_cast<sgx_quote_t*>(quotePublicKey.data() + fullPublicKeySize);
         uint32_t     quoteSize = quotePublicKeyLen - fullPublicKeySize;
+
+	print_quote_details(sgxQuote);
 
         std::vector<CK_BYTE> quote;
         quote.resize(quoteSize);
