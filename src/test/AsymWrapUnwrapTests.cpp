@@ -310,7 +310,7 @@ void print_quote_details(sgx_quote_t *sgxQuote)
 	}
 
 	printf("\nSGX_PRODUCT_ID[size:%lu]:",sizeof(sgxQuote->report_body.isv_prod_id));
-	printf("\n%02x", sgxQuote->report_body.isv_prod_id);
+	printf("%02x\n", sgxQuote->report_body.isv_prod_id);
 
 	printf("SGX_EXT_PRODUCT_ID[size:%lu]:",sizeof(sgxQuote->report_body.isv_ext_prod_id));
 	for(k = 0; k < sizeof(sgxQuote->report_body.isv_ext_prod_id); k++)
